@@ -8,7 +8,7 @@ async function main() {
         return;
     }
     console.log(`processing ${dirpath}`);
-    traverse(dirpath);
+    await traverse(dirpath);
 }
 
 async function traverse(dirpath) {
@@ -20,9 +20,14 @@ async function traverse(dirpath) {
             const entryPath = path.join(dirpath, entry);
             const stat = await fs.promises.stat(entryPath);
             if (stat.isDirectory()) {
-                traverse(entryPath);
+                if (entry === 'node_modules') {
+                    console.log(`found ${entryPath}`);
+                } else {
+                    await traverse(entryPath);
+                }
             } else if (stat.isFile()) {
-                console.log(`processing ${entry}`, stat);
+                //console.log(`processing ${entry}`, stat);
+                // Ignore
             } else {
                 throw new Error("this is a fucking domny shit");
             }
@@ -30,4 +35,4 @@ async function traverse(dirpath) {
     }
 }
 
-main().catch(console.log);
+main().catch(err => console.log(err.stack));
