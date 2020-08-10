@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const colors = require('colors');
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
 
 async function main() {
     const dirpath = process.argv[2];
@@ -90,15 +93,23 @@ async function traverseToFindNodeModulesDirs(dirpath) {
 }
 */
 
-const processNodeModulesFolders = async function (entryPath) {
-    const projectPath = path.dirname(entryPath);
+const processNodeModulesFolders = async function (nodeModulesDirPath) {
+    const projectPath = path.dirname(nodeModulesDirPath);
     const lastModified = await getProjectLastModifiedDate(projectPath);
     const parentDirStat = await fs.promises.stat(projectPath);
-    const size = await calculateDiskUsage(entryPath);
+    const size = await calculateDiskUsage(nodeModulesDirPath);
     const now = new Date();
     const sevenDays = (1000 * 60 * 60 * 24) * 7;
     const shouldDelete = now - lastModified > sevenDays;
-    console.log(`found ${entryPath} last modified ${lastModified} ocupies ${size} shouldDelete ${shouldDelete}`);
+    const message = `found ${nodeModulesDirPath} ocupies ${size} shouldDelete ${shouldDelete}`;
+    if (shouldDelete) {
+        const command = `rm -rf "${nodeModulesDirPath}"`;
+        await exec(command);
+        console.log(colors.red(message));
+        console.log(colors.cyan(command));
+    } else {
+        console.log(colors.green(message));
+    }
 }
 
 const getProjectLastModifiedDate = async function (projectPath) {
