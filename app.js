@@ -81,14 +81,21 @@ const processNodeModulesFolders = async function (entryPath) {
     const size = await calculateDiskUsage(entryPath);
     const now = new Date();
     const sevenDays = (1000 * 60 * 60 * 24) * 7;
-    const shouldDelete = now - parentDirPath.mtime > sevenDays;
-    console.log(`found ${entryPath} last modified ${parentDirPath.mtime} ocupies ${size}`);
+    const shouldDelete = now - parentDirStat.mtime > sevenDays;
+    console.log(`found ${entryPath} last modified ${parentDirStat.mtime} ocupies ${size} shouldDelete ${shouldDelete}`);
 }
 
-const seekModifiedFiles = async function () {
-
+const calculateDiskUsage = async function (dirpath) {
+    let total = 0;
+    await traverse(dirpath, (baseName, aPath, stat) => {
+        if (stat.isFile()) {
+            total += stat.size;
+        }
+    });
+    return total;
 }
 
+/*
 const calculateDiskUsage = async function (entryPath) {
     // console.log('calculateDiskUsage ', entryPath);
     const stat = await fs.promises.stat(entryPath);
@@ -110,5 +117,6 @@ const calculateDiskUsage = async function (entryPath) {
         throw new Error('this is the error');
     }
 }
+*/
 
 main().catch(err => console.log(err.stack));
