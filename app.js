@@ -36,13 +36,26 @@ async function traverse(aPath, visit) {
 
 async function traverseToFindNodeModulesDirs(dirpath) {
     await traverse(dirpath, async (baseName, aPath, stat) => {
-        if (baseName === 'node_modules') {
+        if (baseName.startsWith('.')) {
+            return false;
+        } else if (baseName === 'node_modules') {
             await processNodeModulesFolders(aPath);
         } else if (aPath === '/Users/mac/Library') {
             return false;
         }
     });
 }
+
+const calculateDiskUsage = async function (dirpath) {
+    let total = 0;
+    await traverse(dirpath, (baseName, aPath, stat) => {
+        if (stat.isFile()) {
+            total += stat.size;
+        }
+    });
+    return total;
+}
+
 /*
 async function traverseToFindNodeModulesDirs(dirpath) {
     const childEntries = await fs.promises.readdir(dirpath);
@@ -75,6 +88,7 @@ async function traverseToFindNodeModulesDirs(dirpath) {
     }
 }
 */
+
 const processNodeModulesFolders = async function (entryPath) {
     const parentDirPath = path.dirname(entryPath);
     const parentDirStat = await fs.promises.stat(parentDirPath);
@@ -83,16 +97,6 @@ const processNodeModulesFolders = async function (entryPath) {
     const sevenDays = (1000 * 60 * 60 * 24) * 7;
     const shouldDelete = now - parentDirStat.mtime > sevenDays;
     console.log(`found ${entryPath} last modified ${parentDirStat.mtime} ocupies ${size} shouldDelete ${shouldDelete}`);
-}
-
-const calculateDiskUsage = async function (dirpath) {
-    let total = 0;
-    await traverse(dirpath, (baseName, aPath, stat) => {
-        if (stat.isFile()) {
-            total += stat.size;
-        }
-    });
-    return total;
 }
 
 /*
