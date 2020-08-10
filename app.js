@@ -8,10 +8,43 @@ async function main() {
         return;
     }
     console.log(`processing ${dirpath}`);
-    await traverse(dirpath);
+    await traverseToFindNodeModulesDirs(dirpath);
 }
 
-async function traverse(dirpath) {
+async function traverse(aPath, visit) {
+    const baseName = path.basename(aPath);
+    if (baseName.startsWith('.')) {
+        return;
+    }
+    const stat = await fs.promises.stat(aPath);
+    const result = await visit(baseName, aPath, stat);
+    if (result === false) {
+        return;
+    }
+    if (stat.isDirectory()) {
+        const childEntries = await fs.promises.readdir(aPath);
+        for (let childEntry of childEntries) {
+            const childEntryPath = path.join(aPath, childEntry);
+            await traverse(childEntryPath, visit);
+        }
+    } else if (stat.isFile()) {
+        /*Ignore*/
+    } else {
+        throw new Error('this is not a file or a Directory');
+    }
+}
+
+async function traverseToFindNodeModulesDirs(dirpath) {
+    await traverse(dirpath, async (baseName, aPath, stat) => {
+        if (baseName === 'node_modules') {
+            await processNodeModulesFolders(aPath);
+        } else if (aPath === '/Users/mac/Library') {
+            return false;
+        }
+    });
+}
+/*
+async function traverseToFindNodeModulesDirs(dirpath) {
     const childEntries = await fs.promises.readdir(dirpath);
     for (let entry of childEntries) {
         if (entry.startsWith('.')) {
@@ -27,7 +60,7 @@ async function traverse(dirpath) {
                     } else if (entryPath === '/Users/mac/Library') {
                         // Ignore those files
                     } else {
-                        await traverse(entryPath);
+                        await traverseToFindNodeModulesDirs(entryPath);
                     }
                 } else if (stat.isFile()) {
                     //console.log(`processing ${entry}`, stat);
@@ -41,7 +74,7 @@ async function traverse(dirpath) {
         }
     }
 }
-
+*/
 const processNodeModulesFolders = async function (entryPath) {
     const parentDirPath = path.dirname(entryPath);
     const parentDirStat = await fs.promises.stat(parentDirPath);
@@ -50,6 +83,10 @@ const processNodeModulesFolders = async function (entryPath) {
     const sevenDays = (1000 * 60 * 60 * 24) * 7;
     const shouldDelete = now - parentDirPath.mtime > sevenDays;
     console.log(`found ${entryPath} last modified ${parentDirPath.mtime} ocupies ${size}`);
+}
+
+const seekModifiedFiles = async function () {
+
 }
 
 const calculateDiskUsage = async function (entryPath) {
