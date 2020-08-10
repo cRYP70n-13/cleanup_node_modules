@@ -22,9 +22,8 @@ async function traverse(dirpath) {
                 const stat = await fs.promises.stat(entryPath);
                 if (stat.isDirectory()) {
                     if (entry === 'node_modules') {
-                        console.log(`found ${entryPath}`);
-                        const size = await calculateDiskUsage(entryPath);
-                        console.log('       occupies', size);
+                        await processNodeModulesFolders(entryPath);
+                        console.log(`found ${entryPath} occupies ${size} shouldDelete ${shouldDelete}`);
                     } else if (entryPath === '/Users/mac/Library') {
                         // Ignore those files
                     } else {
@@ -41,6 +40,16 @@ async function traverse(dirpath) {
             }
         }
     }
+}
+
+const processNodeModulesFolders = async function (entryPath) {
+    const parentDirPath = path.dirname(entryPath);
+    const parentDirStat = await fs.promises.stat(parentDirPath);
+    const size = await calculateDiskUsage(entryPath);
+    const now = new Date();
+    const sevenDays = (1000 * 60 * 60 * 24) * 7;
+    const shouldDelete = now - parentDirPath.mtime > sevenDays;
+    console.log(`found ${entryPath} last modified ${parentDirPath.mtime} ocupies ${size}`);
 }
 
 const calculateDiskUsage = async function (entryPath) {
