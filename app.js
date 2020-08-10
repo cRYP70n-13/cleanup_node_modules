@@ -40,6 +40,7 @@ async function traverseToFindNodeModulesDirs(dirpath) {
             return false;
         } else if (baseName === 'node_modules') {
             await processNodeModulesFolders(aPath);
+            return false;
         } else if (aPath === '/Users/mac/Library') {
             return false;
         }
@@ -90,13 +91,32 @@ async function traverseToFindNodeModulesDirs(dirpath) {
 */
 
 const processNodeModulesFolders = async function (entryPath) {
-    const parentDirPath = path.dirname(entryPath);
-    const parentDirStat = await fs.promises.stat(parentDirPath);
+    const projectPath = path.dirname(entryPath);
+    const lastModified = await getProjectLastModifiedDate(projectPath);
+    const parentDirStat = await fs.promises.stat(projectPath);
     const size = await calculateDiskUsage(entryPath);
     const now = new Date();
     const sevenDays = (1000 * 60 * 60 * 24) * 7;
-    const shouldDelete = now - parentDirStat.mtime > sevenDays;
-    console.log(`found ${entryPath} last modified ${parentDirStat.mtime} ocupies ${size} shouldDelete ${shouldDelete}`);
+    const shouldDelete = now - lastModified > sevenDays;
+    console.log(`found ${entryPath} last modified ${lastModified} ocupies ${size} shouldDelete ${shouldDelete}`);
+}
+
+const getProjectLastModifiedDate = async function (projectPath) {
+    let lastModified;
+    await traverse(projectPath, (baseName, aPath, stat) => {
+        if (baseName === 'node_modules') {
+            return false;
+        } else if (baseName.startsWith('.')) {
+            return false;
+        } else if (stat.isFile()) {
+            if (!lastModified) {
+                lastModified = stat.mtime;
+            } else if (stat.mtime > lastModified) {
+                lastModified = stat.mtime;
+            }
+        }
+    });
+    return lastModified;
 }
 
 /*
